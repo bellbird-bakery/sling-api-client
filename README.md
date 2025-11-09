@@ -12,6 +12,8 @@ A Python client for the [Sling](https://getsling.com) scheduling and workforce m
 - ✅ **Logging** - Detailed logging for debugging and monitoring
 - ✅ **Field Mapping Utilities** - Helper functions for data transformation
 - ✅ **Django Integration Examples** - Complete reference implementation included
+- ✅ **Messaging & Communication** - Full support for conversations, channels, articles, and comments
+- ✅ **Shift Management** - Create, update, publish, and manage employee shifts
 
 ## Installation
 
@@ -179,6 +181,87 @@ members = group_detail.get("members", [])
 teams = client.fetch_teams()
 ```
 
+### Messaging & Communication Methods
+
+```python
+# Conversations - Direct messaging between employees
+conversations = client.fetch_conversations()
+conversation = client.fetch_conversation(conversation_id="123456")
+
+# Create new conversation
+new_conv = client.create_conversation(
+    user_ids=["111", "222"],
+    message="Hey team, let's discuss the schedule",
+    group_name="Schedule Planning"
+)
+
+# Send and manage messages
+client.send_message(conversation_id="123456", text="Meeting at 3pm")
+messages = client.fetch_messages(conversation_id="123456", limit=50)
+client.add_message_reaction(conversation_id="123456", message_id="789", emoji="👍")
+
+# Search conversations
+results = client.search_conversations(query="schedule")
+
+# Channels - Company newsfeed/announcements
+channels = client.fetch_channels()
+channel = client.fetch_channel(channel_id="456")
+
+# Subscribe to channels
+client.subscribe_to_channel(channel_id="456")
+client.pin_channel(channel_id="456")  # Pin for quick access
+
+# Articles - Posts in channels
+articles = client.fetch_articles(channel_id="456")
+new_article = client.create_article(
+    channel_id="456",
+    article_data={
+        "title": "New Policy Update",
+        "body": "Please review the updated attendance policy...",
+        "attachments": []
+    }
+)
+
+# Interact with articles
+client.like_article(channel_id="456", article_id="789")
+client.mark_article_read(channel_id="456", article_id="789")
+
+# Comments on articles
+comments = client.fetch_article_comments(channel_id="456", article_id="789")
+client.add_article_comment(
+    channel_id="456",
+    article_id="789",
+    text="Thanks for the update!"
+)
+```
+
+### Shift Methods
+
+```python
+# Fetch shifts in date range
+shifts = client.fetch_shifts(
+    start_date="2024-01-01",
+    end_date="2024-01-31",
+    user_ids=["123456"]  # Optional filter by users
+)
+
+# Get single shift
+shift = client.fetch_shift(shift_id="789")
+
+# Create and manage shifts
+new_shift = client.create_shift({
+    "user": "123456",
+    "start": "2024-01-15T09:00:00Z",
+    "end": "2024-01-15T17:00:00Z",
+    "location": "store-1",
+    "position": "cashier"
+})
+
+client.update_shift(shift_id="789", shift_data={"start": "2024-01-15T10:00:00Z"})
+client.publish_shift(shift_id="789")  # Make visible to employees
+client.delete_shift(shift_id="789")
+```
+
 ## Error Handling
 
 The client raises specific exceptions for different error conditions:
@@ -302,7 +385,7 @@ else:
 
 - **Limited Personal Data**: Sling API does not provide all employee fields (e.g., hire date, address, phone). You'll need to manage these fields separately in your system.
 
-- **No Compensation Data**: Pay rates and salaries are not available via the Sling API for privacy reasons.
+- **No Compensation Data**: Pay rates and salaries are not available via the Sling API. This was confirmed by analyzing the complete OpenAPI specification at `https://api.getsling.com/v1/spec.json` - no wage or salary endpoints exist. This is a deliberate privacy/security restriction.
 
 ## Contributing
 

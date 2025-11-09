@@ -435,6 +435,719 @@ class SlingAPIClient:
         logger.info(f"Fetched {len(teams)} teams")
         return teams
 
+    # Conversation methods
+    def fetch_conversations(self) -> List[Dict[str, Any]]:
+        """
+        Fetch all conversations for the current user.
+
+        Returns:
+            List of conversation dictionaries
+        """
+        logger.info("Fetching conversations from Sling")
+        response = self.get("/conversations")
+        conversations = response if isinstance(response, list) else response.get("conversations", [])
+        logger.info(f"Fetched {len(conversations)} conversations")
+        return conversations
+
+    def fetch_conversation(self, conversation_id: str) -> Dict[str, Any]:
+        """
+        Fetch a single conversation by ID.
+
+        Args:
+            conversation_id: Sling conversation ID
+
+        Returns:
+            Conversation dictionary with details
+        """
+        logger.info(f"Fetching conversation {conversation_id} from Sling")
+        return self.get(f"/conversations/{conversation_id}")
+
+    def create_conversation(
+        self,
+        user_ids: List[str],
+        message: Optional[str] = None,
+        group_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a new conversation.
+
+        Args:
+            user_ids: List of user IDs to include in conversation
+            message: Optional initial message
+            group_name: Optional name for group conversations
+
+        Returns:
+            Created conversation data
+        """
+        data = {"users": user_ids}
+        if message:
+            data["message"] = message
+        if group_name:
+            data["name"] = group_name
+
+        logger.info(f"Creating conversation with {len(user_ids)} users")
+        return self.post("/conversations", data=data)
+
+    def delete_conversation(self, conversation_id: str) -> Dict[str, Any]:
+        """
+        Archive or delete a conversation.
+
+        Args:
+            conversation_id: Sling conversation ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Deleting conversation {conversation_id}")
+        return self.delete(f"/conversations/{conversation_id}")
+
+    def update_conversation(
+        self,
+        conversation_id: str,
+        conversation_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Update group conversation details (e.g., name).
+
+        Args:
+            conversation_id: Sling conversation ID
+            conversation_data: Updated conversation data
+
+        Returns:
+            Updated conversation data
+        """
+        logger.info(f"Updating conversation {conversation_id}")
+        return self.put(f"/conversations/{conversation_id}", data=conversation_data)
+
+    def silence_conversation(self, conversation_id: str) -> Dict[str, Any]:
+        """
+        Stop notifications from a conversation.
+
+        Args:
+            conversation_id: Sling conversation ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Silencing conversation {conversation_id}")
+        return self.post(f"/conversations/{conversation_id}/silence")
+
+    def unsilence_conversation(self, conversation_id: str) -> Dict[str, Any]:
+        """
+        Enable notifications for a conversation.
+
+        Args:
+            conversation_id: Sling conversation ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Unsilencing conversation {conversation_id}")
+        return self.delete(f"/conversations/{conversation_id}/silence")
+
+    # Message methods
+    def fetch_messages(
+        self,
+        conversation_id: str,
+        limit: Optional[int] = None,
+        before: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch messages from a conversation.
+
+        Args:
+            conversation_id: Sling conversation ID
+            limit: Maximum number of messages to fetch
+            before: Fetch messages before this timestamp
+
+        Returns:
+            List of message dictionaries
+        """
+        params = {}
+        if limit:
+            params["limit"] = limit
+        if before:
+            params["before"] = before
+
+        logger.info(f"Fetching messages from conversation {conversation_id}")
+        response = self.get(f"/conversations/{conversation_id}/messages", params=params)
+        messages = response if isinstance(response, list) else response.get("messages", [])
+        logger.info(f"Fetched {len(messages)} messages")
+        return messages
+
+    def send_message(
+        self,
+        conversation_id: str,
+        text: str,
+        attachments: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Send a message to a conversation.
+
+        Args:
+            conversation_id: Sling conversation ID
+            text: Message text content
+            attachments: Optional list of attachment objects
+
+        Returns:
+            Created message data
+        """
+        data = {"text": text}
+        if attachments:
+            data["attachments"] = attachments
+
+        logger.info(f"Sending message to conversation {conversation_id}")
+        return self.post(f"/conversations/{conversation_id}/messages", data=data)
+
+    def update_message(
+        self,
+        conversation_id: str,
+        message_id: str,
+        message_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Update a message in a conversation.
+
+        Args:
+            conversation_id: Sling conversation ID
+            message_id: Message ID to update
+            message_data: Updated message data
+
+        Returns:
+            Updated message data
+        """
+        logger.info(f"Updating message {message_id} in conversation {conversation_id}")
+        return self.put(
+            f"/conversations/{conversation_id}/messages/{message_id}",
+            data=message_data
+        )
+
+    def delete_message(self, conversation_id: str, message_id: str) -> Dict[str, Any]:
+        """
+        Delete a message from a conversation.
+
+        Args:
+            conversation_id: Sling conversation ID
+            message_id: Message ID to delete
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Deleting message {message_id} from conversation {conversation_id}")
+        return self.delete(f"/conversations/{conversation_id}/messages/{message_id}")
+
+    def send_bulk_message(
+        self,
+        conversation_id: str,
+        recipients: List[str],
+        text: str,
+    ) -> Dict[str, Any]:
+        """
+        Send BCC-like message to multiple recipients.
+
+        Args:
+            conversation_id: Sling conversation ID
+            recipients: List of user IDs
+            text: Message text content
+
+        Returns:
+            Response data
+        """
+        data = {"recipients": recipients, "text": text}
+        logger.info(f"Sending bulk message to {len(recipients)} recipients")
+        return self.post(f"/conversations/{conversation_id}/bulk/messages", data=data)
+
+    def add_message_reaction(
+        self,
+        conversation_id: str,
+        message_id: str,
+        emoji: str,
+    ) -> Dict[str, Any]:
+        """
+        Add emoji reaction to a message.
+
+        Args:
+            conversation_id: Sling conversation ID
+            message_id: Message ID
+            emoji: Emoji character or code
+
+        Returns:
+            Response data
+        """
+        data = {"emoji": emoji}
+        logger.info(f"Adding reaction to message {message_id}")
+        return self.put(
+            f"/conversations/{conversation_id}/emojis/{message_id}",
+            data=data
+        )
+
+    def remove_message_reaction(
+        self,
+        conversation_id: str,
+        message_id: str,
+        emoji: str,
+    ) -> Dict[str, Any]:
+        """
+        Remove emoji reaction from a message.
+
+        Args:
+            conversation_id: Sling conversation ID
+            message_id: Message ID
+            emoji: Emoji character or code to remove
+
+        Returns:
+            Response data
+        """
+        data = {"emoji": emoji}
+        logger.info(f"Removing reaction from message {message_id}")
+        return self.post(
+            f"/conversations/{conversation_id}/emojis/{message_id}/delete",
+            data=data
+        )
+
+    def search_conversations(self, query: str) -> List[Dict[str, Any]]:
+        """
+        Search conversations for text.
+
+        Args:
+            query: Search query string
+
+        Returns:
+            List of matching conversations/messages
+        """
+        data = {"query": query}
+        logger.info(f"Searching conversations for: {query}")
+        response = self.post("/search", data=data)
+        return response if isinstance(response, list) else response.get("results", [])
+
+    # Channel methods (Newsfeed/Announcements)
+    def fetch_channels(self, all_channels: bool = False) -> List[Dict[str, Any]]:
+        """
+        Fetch channels (newsfeed/announcements) for the user.
+
+        Args:
+            all_channels: If True, fetch all org channels (admin only)
+
+        Returns:
+            List of channel dictionaries
+        """
+        endpoint = "/channels/all" if all_channels else "/channels"
+        logger.info("Fetching channels from Sling")
+        response = self.get(endpoint)
+        channels = response if isinstance(response, list) else response.get("channels", [])
+        logger.info(f"Fetched {len(channels)} channels")
+        return channels
+
+    def fetch_channel(self, channel_id: str) -> Dict[str, Any]:
+        """
+        Fetch a single channel with its articles.
+
+        Args:
+            channel_id: Sling channel ID
+
+        Returns:
+            Channel dictionary with articles
+        """
+        logger.info(f"Fetching channel {channel_id} from Sling")
+        return self.get(f"/channels/{channel_id}")
+
+    def create_channel(self, channel_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new channel (admin only).
+
+        Args:
+            channel_data: Channel data including name, description, etc.
+
+        Returns:
+            Created channel data
+        """
+        logger.info(f"Creating channel: {channel_data.get('name')}")
+        return self.post("/channels", data=channel_data)
+
+    def subscribe_to_channel(self, channel_id: str) -> Dict[str, Any]:
+        """
+        Subscribe current user to a channel.
+
+        Args:
+            channel_id: Sling channel ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Subscribing to channel {channel_id}")
+        return self.post(f"/channels/{channel_id}/subscribers")
+
+    def unsubscribe_from_channel(self, channel_id: str) -> Dict[str, Any]:
+        """
+        Unsubscribe current user from a channel.
+
+        Args:
+            channel_id: Sling channel ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Unsubscribing from channel {channel_id}")
+        return self.delete(f"/channels/{channel_id}/subscribers")
+
+    def pin_channel(self, channel_id: str) -> Dict[str, Any]:
+        """
+        Pin a channel for quick access.
+
+        Args:
+            channel_id: Sling channel ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Pinning channel {channel_id}")
+        return self.post(f"/channels/{channel_id}/pin")
+
+    def unpin_channel(self, channel_id: str) -> Dict[str, Any]:
+        """
+        Unpin a channel.
+
+        Args:
+            channel_id: Sling channel ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Unpinning channel {channel_id}")
+        return self.delete(f"/channels/{channel_id}/pin")
+
+    # Article methods (Posts in channels)
+    def fetch_articles(self, channel_id: str) -> List[Dict[str, Any]]:
+        """
+        Fetch articles from a channel.
+
+        Args:
+            channel_id: Sling channel ID
+
+        Returns:
+            List of article dictionaries
+        """
+        logger.info(f"Fetching articles from channel {channel_id}")
+        response = self.get(f"/channels/{channel_id}/articles")
+        articles = response if isinstance(response, list) else response.get("articles", [])
+        logger.info(f"Fetched {len(articles)} articles")
+        return articles
+
+    def fetch_article(self, channel_id: str, article_id: str) -> Dict[str, Any]:
+        """
+        Fetch a single article with details.
+
+        Args:
+            channel_id: Sling channel ID
+            article_id: Article ID
+
+        Returns:
+            Article dictionary
+        """
+        logger.info(f"Fetching article {article_id} from channel {channel_id}")
+        return self.get(f"/channels/{channel_id}/articles/{article_id}")
+
+    def create_article(
+        self,
+        channel_id: str,
+        article_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Create a new article (post) in a channel.
+
+        Args:
+            channel_id: Sling channel ID
+            article_data: Article data (title, body, attachments, etc.)
+
+        Returns:
+            Created article data
+        """
+        logger.info(f"Creating article in channel {channel_id}")
+        return self.post(f"/channels/{channel_id}/articles", data=article_data)
+
+    def update_article(
+        self,
+        channel_id: str,
+        article_id: str,
+        article_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Update an article.
+
+        Args:
+            channel_id: Sling channel ID
+            article_id: Article ID
+            article_data: Updated article data
+
+        Returns:
+            Updated article data
+        """
+        logger.info(f"Updating article {article_id} in channel {channel_id}")
+        return self.put(
+            f"/channels/{channel_id}/articles/{article_id}",
+            data=article_data
+        )
+
+    def delete_article(self, channel_id: str, article_id: str) -> Dict[str, Any]:
+        """
+        Delete an article from a channel.
+
+        Args:
+            channel_id: Sling channel ID
+            article_id: Article ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Deleting article {article_id} from channel {channel_id}")
+        return self.delete(f"/channels/{channel_id}/articles/{article_id}")
+
+    def like_article(self, channel_id: str, article_id: str) -> Dict[str, Any]:
+        """
+        Like an article.
+
+        Args:
+            channel_id: Sling channel ID
+            article_id: Article ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Liking article {article_id}")
+        return self.post(f"/channels/{channel_id}/articles/{article_id}/likes")
+
+    def unlike_article(self, channel_id: str, article_id: str) -> Dict[str, Any]:
+        """
+        Remove like from an article.
+
+        Args:
+            channel_id: Sling channel ID
+            article_id: Article ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Unliking article {article_id}")
+        return self.delete(f"/channels/{channel_id}/articles/{article_id}/likes")
+
+    def mark_article_read(self, channel_id: str, article_id: str) -> Dict[str, Any]:
+        """
+        Mark an article as read.
+
+        Args:
+            channel_id: Sling channel ID
+            article_id: Article ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Marking article {article_id} as read")
+        return self.put(f"/channels/{channel_id}/articles/{article_id}/seen")
+
+    # Article comments
+    def fetch_article_comments(
+        self,
+        channel_id: str,
+        article_id: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch comments on an article.
+
+        Args:
+            channel_id: Sling channel ID
+            article_id: Article ID
+
+        Returns:
+            List of comment dictionaries
+        """
+        logger.info(f"Fetching comments for article {article_id}")
+        response = self.get(f"/channels/{channel_id}/articles/{article_id}/comments")
+        comments = response if isinstance(response, list) else response.get("comments", [])
+        return comments
+
+    def add_article_comment(
+        self,
+        channel_id: str,
+        article_id: str,
+        text: str,
+    ) -> Dict[str, Any]:
+        """
+        Add a comment to an article.
+
+        Args:
+            channel_id: Sling channel ID
+            article_id: Article ID
+            text: Comment text
+
+        Returns:
+            Created comment data
+        """
+        data = {"text": text}
+        logger.info(f"Adding comment to article {article_id}")
+        return self.post(
+            f"/channels/{channel_id}/articles/{article_id}/comments",
+            data=data
+        )
+
+    def update_article_comment(
+        self,
+        channel_id: str,
+        article_id: str,
+        comment_id: str,
+        text: str,
+    ) -> Dict[str, Any]:
+        """
+        Update an article comment.
+
+        Args:
+            channel_id: Sling channel ID
+            article_id: Article ID
+            comment_id: Comment ID
+            text: Updated comment text
+
+        Returns:
+            Updated comment data
+        """
+        data = {"text": text}
+        logger.info(f"Updating comment {comment_id} on article {article_id}")
+        return self.put(
+            f"/channels/{channel_id}/articles/{article_id}/comments/{comment_id}",
+            data=data
+        )
+
+    def delete_article_comment(
+        self,
+        channel_id: str,
+        article_id: str,
+        comment_id: str,
+    ) -> Dict[str, Any]:
+        """
+        Delete an article comment.
+
+        Args:
+            channel_id: Sling channel ID
+            article_id: Article ID
+            comment_id: Comment ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Deleting comment {comment_id} from article {article_id}")
+        return self.delete(
+            f"/channels/{channel_id}/articles/{article_id}/comments/{comment_id}"
+        )
+
+    # Shift methods (additional endpoints not in original client)
+    def fetch_shifts(
+        self,
+        start_date: str,
+        end_date: str,
+        user_ids: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch shifts within a date range.
+
+        Args:
+            start_date: Start date (ISO format)
+            end_date: End date (ISO format)
+            user_ids: Optional list of user IDs to filter by
+
+        Returns:
+            List of shift dictionaries
+        """
+        params = {"dates": f"{start_date}/{end_date}"}
+        if user_ids:
+            params["users"] = ",".join(user_ids)
+
+        logger.info(f"Fetching shifts from {start_date} to {end_date}")
+        response = self.get("/shifts", params=params)
+        shifts = response if isinstance(response, list) else response.get("shifts", [])
+        logger.info(f"Fetched {len(shifts)} shifts")
+        return shifts
+
+    def fetch_shift(self, shift_id: str) -> Dict[str, Any]:
+        """
+        Fetch a single shift by ID.
+
+        Args:
+            shift_id: Sling shift/event ID
+
+        Returns:
+            Shift dictionary
+        """
+        logger.info(f"Fetching shift {shift_id} from Sling")
+        return self.get(f"/shifts/{shift_id}")
+
+    def create_shift(self, shift_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a new shift.
+
+        Args:
+            shift_data: Shift data (user, start, end, position, location, etc.)
+
+        Returns:
+            Created shift data
+        """
+        logger.info("Creating shift in Sling")
+        return self.post("/shifts", data=shift_data)
+
+    def update_shift(
+        self,
+        shift_id: str,
+        shift_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Update an existing shift.
+
+        Args:
+            shift_id: Sling shift/event ID
+            shift_data: Updated shift data
+
+        Returns:
+            Updated shift data
+        """
+        logger.info(f"Updating shift {shift_id}")
+        return self.put(f"/shifts/{shift_id}", data=shift_data)
+
+    def delete_shift(self, shift_id: str) -> Dict[str, Any]:
+        """
+        Delete a shift.
+
+        Args:
+            shift_id: Sling shift/event ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Deleting shift {shift_id}")
+        return self.post("/shifts/delete", data={"ids": [shift_id]})
+
+    def publish_shift(self, shift_id: str) -> Dict[str, Any]:
+        """
+        Publish a shift to make it visible to employees.
+
+        Args:
+            shift_id: Sling shift/event ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Publishing shift {shift_id}")
+        return self.post(f"/shifts/{shift_id}/sync")
+
+    def unpublish_shift(self, shift_id: str) -> Dict[str, Any]:
+        """
+        Unpublish a shift.
+
+        Args:
+            shift_id: Sling shift/event ID
+
+        Returns:
+            Response data
+        """
+        logger.info(f"Unpublishing shift {shift_id}")
+        return self.post(f"/shifts/{shift_id}/unpublish")
+
     def test_connection(self) -> bool:
         """
         Test the connection to Sling API.
